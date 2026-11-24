@@ -34,6 +34,13 @@ def create_graph(transactions, labels, devices, merchants):
         for item in labels
     }
 
+    # Missing or NULL labels must remain unknown; they must never be
+    # silently converted into confirmed non-fraud (0).
+    missing_label_count = sum(
+        1 for transaction in transactions
+        if label_map.get(transaction["transaction_id"]) is None
+    )
+
     loaded = 0
 
     with driver.session(database=DATABASE) as session:
@@ -81,7 +88,7 @@ def create_graph(transactions, labels, devices, merchants):
                 transaction_id=transaction_id,
                 amount=transaction["transaction_amount"],
                 transaction_time=transaction["transaction_time"],
-                fraud_label=label_map.get(transaction_id, 0)
+                fraud_label=label_map.get(transaction_id)
             )
 
             loaded += 1
@@ -89,6 +96,7 @@ def create_graph(transactions, labels, devices, merchants):
     print("\nGRAPH LOADING SUMMARY")
     print("Valid transactions loaded:", loaded)
     print("Fraud labels available:", len(labels))
+    print("Transactions with unknown/missing fraud labels:", missing_label_count)
     print("Graph loading completed!")
 
 

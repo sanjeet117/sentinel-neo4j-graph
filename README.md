@@ -54,6 +54,9 @@ Properties:
 ```text
 sentinel-neo4j-graph/
 │
+├── queries/
+│   └── investigation.cypher
+│
 ├── src/
 │   ├── connection.py
 │   ├── supabase_connection.py
@@ -167,23 +170,19 @@ The loader:
 
 ## 10. Fraud Investigation Using Cypher
 
-### Query 1: Devices Shared by Three or More Customers Within Seven Days
+The three executable investigation queries are in:
 
-The query checks device usage in the seven days preceding the latest transaction timestamp in the loaded dataset.
+```text
+queries/investigation.cypher
+```
 
-**Observed result:** No devices matched this condition.
+Open this file and run each query separately in Neo4j Browser (`http://localhost:7474`) after loading the graph.
 
-### Query 2: Customers Within Two Hops of Fraud-Labelled Payments
+1. **Shared devices within seven days:** counts distinct customers per device in the seven-day window ending at the latest `USED_DEVICE.time` in the graph. It returns devices shared by at least three customers.
+2. **Two-hop fraud proximity:** finds customers who share a device or merchant with a customer who has a `PAID` relationship where `fraud_label = 1`.
+3. **Merchant ranking:** ranks merchants by payments from customers using shared devices. It explicitly joins `USED_DEVICE` and `PAID` relationships using `transaction_id`.
 
-This query identifies customers connected within one or two relationship hops to a fraud-labelled payment.
-
-**Observed result:** Matching customer paths were found, including customers connected through a common merchant.
-
-### Query 3: Merchants Paid Through Shared Devices
-
-This query identifies merchants receiving payments through devices used by at least two customers.
-
-**Observed result:** Ten merchants were returned in the top-ten results. The highest payment count was nine.
+The loader preserves missing fraud labels as unknown (`null`) and reports the number of selected transactions whose label is missing or NULL. It does not treat an unavailable label as confirmed non-fraud.
 
 ## 11. Suspicious Cluster Analysis
 
